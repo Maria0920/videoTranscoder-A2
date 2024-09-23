@@ -95,6 +95,27 @@
         </div>
       </div>
     </div>
+
     <script src="./js/app.js"></script>
+    <script>
+      // Create a WebSocket connection
+      const socket = new WebSocket("ws://localhost:3000");
+
+      socket.addEventListener("open", () => {
+        console.log("WebSocket connection established");
+      });
+
+      socket.addEventListener("message", (event) => {
+        console.log("Message received from server:", event.data);
+      });
+
+      socket.addEventListener("close", () => {
+        console.log("WebSocket connection closed");
+      });
+
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket error:", error);
+      });
+    </script>
   </body>
 </html>

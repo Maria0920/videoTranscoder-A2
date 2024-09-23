@@ -4,25 +4,47 @@ import {
   AuthFlowType,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { CognitoJwtVerifier } from "aws-jwt-verify";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
-const userPoolId = "ap-southeast-2_zakn7Hf7X"; // Obtain from AWS console
-const clientId = "162rnv81d0nht4fh2amtgfjnvm"; // Obtain from AWS console
 const region = "ap-southeast-2"; // Your AWS region
 
-const accessVerifier = CognitoJwtVerifier.create({
-  userPoolId: userPoolId,
-  tokenUse: "access",
-  clientId: clientId,
-});
+// Create SSM Client
+const ssmClient = new SSMClient({ region });
 
-const idVerifier = CognitoJwtVerifier.create({
-  userPoolId: userPoolId,
-  tokenUse: "id",
-  clientId: clientId,
-});
+async function getParameter(name) {
+  const command = new GetParameterCommand({
+    Name: name,
+    WithDecryption: true, // Set to true if you're using SecureString
+  });
+
+  const response = await ssmClient.send(command);
+  return response.Parameter.Value;
+}
+
+async function setup() {
+  // Fetch User Pool ID and Client ID from Parameter Store
+  const userPoolId = await getParameter("n11794615-userpoolid");
+  const clientId = await getParameter("n11794615-clientID");
+
+  const accessVerifier = CognitoJwtVerifier.create({
+    userPoolId: userPoolId,
+    tokenUse: "access",
+    clientId: clientId,
+  });
+
+  const idVerifier = CognitoJwtVerifier.create({
+    userPoolId: userPoolId,
+    tokenUse: "id",
+    clientId: clientId,
+  });
+
+  return { accessVerifier, idVerifier, clientId };
+}
 
 async function authenticate(username, password) {
   console.log("Getting auth token");
+
+  const { accessVerifier, idVerifier, clientId } = await setup();
 
   const client = new CognitoIdentityProviderClient({ region });
 

@@ -3,11 +3,10 @@
 npm install @aws-sdk/client-cognito-identity-provider
 npm install amazon-cognito-identity-js
 
+## Configure AWS Credentials
 
-
-Configure AWS Credentials
 1, Open prompt command
-2, Run setx AWS_ACCESS_KEY_ID "ASIA5DYSEEJ42B2GGZWP" 
+2, For windows, Run setx AWS_ACCESS_KEY_ID "ASIA5DYSEEJ42B2GGZWP"
 setx AWS_SECRET_ACCESS_KEY "FyhpoPnW0z2D+8Eh8lYe8B42gDlxlMNIkvQc/AJy" S
 
 npm install speakeasy qrcode
@@ -15,3 +14,30 @@ npm install speakeasy qrcode
 npm install @react-oauth/google
 npm install google-auth-library
 npm install @react-oauth/google react-router-dom
+
+npm install qrcode.react
+
+## parameter
+
+1, install npm install @aws-sdk/client-ssm
+2, run aws --version to check if CLI is installed
+3, if it is installed, run the codes below in visual studio code powershell
+
+$env:AWS_ACCESS_KEY_ID = "your id"
+$env:AWS_SECRET_ACCESS_KEY = "Jyour id"
+$env:AWS_SESSION_TOKEN = "your_session_token_here" # If applicable
+
+4, run the codes below to check that the new values are set
+
+echo $env:AWS_ACCESS_KEY_ID
+echo $env:AWS_SECRET_ACCESS_KEY
+echo $env:AWS_SESSION_TOKEN # If applicable
+
+5, run the codes below to fetch from parameter store
+
+aws ssm get-parameter --name "n11794615-clientID" --with-decryption
+aws ssm get-parameter --name "n11794615-userpoolid" --with-decryption
+
+## Secret manager
+
+1, run npm install @aws-sdk/client-secrets-manager

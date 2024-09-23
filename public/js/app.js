@@ -25,9 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         const response = await fetch("/auth/signup", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, email, password, confirmPassword }),
         });
 
@@ -36,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           alert(
             data.message || "Signup successful! Please confirm your email."
           );
-          window.location.href = "/confirmCode.html"; // Redirect to email confirmation page
+          window.location.href = "/index.html"; // Redirect to email confirmation page
         } else {
           alert(data.message || "Signup failed");
         }
@@ -74,7 +72,7 @@ async function isValidToken(token) {
   }
 }
 
-// Login function without MFA
+// Login function with MFA handling
 async function login() {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
@@ -90,20 +88,55 @@ async function login() {
     const data = await response.json();
     console.log("Login response:", data); // Log the response data
 
-    if (!response.ok) throw new Error("Login failed");
-
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("username", username);
-
-    // Set greeting in profile section
-    document.querySelector(
-      "#profileSection h2"
-    ).innerText = `Welcome, ${username}!`;
-
-    showMainContent(); // Show the main content page after login
+    if (!response.ok) {
+      if (data.message === "MFA required") {
+        showMfaPage(data.qrCode); // Show MFA input page
+      } else {
+        throw new Error("Login failed");
+      }
+    } else {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("username", username);
+      document.querySelector(
+        "#profileSection h2"
+      ).innerText = `Welcome, ${username}!`;
+      showMainContent(); // Show the main content page after login
+    }
   } catch (error) {
     console.error("Login error:", error);
     alert("An error occurred during login");
+  }
+}
+
+// Function to show the MFA input page
+function showMfaPage(qrCode) {
+  document.getElementById("loginPage").style.display = "none"; // Hide login page
+  document.getElementById("mfaPage").style.display = "block"; // Show MFA input page
+  document.getElementById("qrCode").src = qrCode; // Set QR code for the user to scan
+}
+
+// Function to handle MFA token submission
+async function verifyMfaToken() {
+  const token = document.getElementById("mfaToken").value;
+
+  try {
+    const response = await fetch("/auth/verify-mfa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      localStorage.setItem("token", data.token); // Store the new token
+      showMainContent(); // Show main content after successful MFA
+    } else {
+      alert(data.message || "MFA verification failed");
+    }
+  } catch (error) {
+    console.error("MFA verification error:", error);
+    alert("An error occurred during MFA verification");
   }
 }
 

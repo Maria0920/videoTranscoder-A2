@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
           alert(
             data.message || "Signup successful! Please confirm your email."
           );
-          window.location.href = "/confirmCode.html"; // Redirect to email confirmation page
+          window.location.href = "/index.html"; // Redirect to email confirmation page
         } else {
           alert(data.message || "Signup failed");
         }

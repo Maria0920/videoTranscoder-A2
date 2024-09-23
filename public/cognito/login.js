@@ -2,14 +2,28 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
-const clientId = "162rnv81d0nht4fh2amtgfjnvm"; // Your Cognito App Client ID
 const region = "ap-southeast-2"; // Your AWS Region
+
+// Create SSM Client
+const ssmClient = new SSMClient({ region });
+
+async function getParameter(name) {
+  const command = new GetParameterCommand({
+    Name: name,
+    WithDecryption: true, // Set to true if you're using SecureString
+  });
+
+  const response = await ssmClient.send(command);
+  return response.Parameter.Value;
+}
 
 // Function to handle user login
 async function login(username, password) {
   console.log("Logging in with:", username); // Log the username
 
+  const clientId = await getParameter("n11794615-clientID"); // Fetch Client ID from Parameter Store
   const client = new CognitoIdentityProviderClient({ region });
 
   const command = new InitiateAuthCommand({

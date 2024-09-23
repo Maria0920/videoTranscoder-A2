@@ -20,7 +20,7 @@ document
 
       if (response.ok) {
         alert("Account confirmed successfully! Please proceed to setup TOTP.");
-        window.location.href = "/setup-totp.html"; // Redirect to TOTP setup page
+        window.location.href = "/mfa.js"; // Redirect to TOTP setup page
       } else {
         alert("Confirmation failed. Please check your code and try again.");
       }

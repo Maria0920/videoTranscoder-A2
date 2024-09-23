@@ -6,18 +6,72 @@ import {
   ConfirmSignUpCommand,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager"; // Import SecretsManagerClient
 
 const router = express.Router();
 
 // Configuration Details
-const clientId = "162rnv81d0nht4fh2amtgfjnvm"; // Your Cognito Client ID
 const region = "ap-southeast-2"; // Your AWS Region
-const userPoolId = "ap-southeast-2_zakn7Hf7X"; // Your User Pool ID
-const JWT_SECRET = process.env.SECRET_KEY; // Your JWT Secret
+let JWT_SECRET; // Initialize JWT_SECRET
+const ssmClient = new SSMClient({ region });
+const secretsManagerClient = new SecretsManagerClient({ region }); // Initialize Secrets Manager client
+let clientId = "";
+let userPoolId = "";
 
-const client = new CognitoIdentityProviderClient({ region });
+// Initialize Cognito Client
+async function initializeCognitoClient() {
+  await fetchParameters();
+  JWT_SECRET = await fetchSecret("n11794615-jwt-secret"); // Fetch JWT secret
+  if (!clientId || !userPoolId) {
+    throw new Error("Client ID or User Pool ID is null");
+  }
+  return new CognitoIdentityProviderClient({ region });
+}
 
-// Global variable to store access token (consider using session or database for production)
+// Fetch parameters from AWS Parameter Store
+async function fetchParameters() {
+  const clientIdCommand = new GetParameterCommand({
+    Name: "n11794615-clientID",
+    WithDecryption: true,
+  });
+
+  const userPoolIdCommand = new GetParameterCommand({
+    Name: "n11794615-userpoolid",
+    WithDecryption: true,
+  });
+
+  try {
+    const clientIdResponse = await ssmClient.send(clientIdCommand);
+    clientId = clientIdResponse.Parameter.Value;
+
+    const userPoolIdResponse = await ssmClient.send(userPoolIdCommand);
+    userPoolId = userPoolIdResponse.Parameter.Value;
+  } catch (err) {
+    console.error("Error fetching parameters:", err);
+    throw new Error("Could not retrieve Cognito configuration");
+  }
+}
+
+// Fetch secret from AWS Secrets Manager
+async function fetchSecret(secretName) {
+  const command = new GetSecretValueCommand({ SecretId: secretName });
+
+  try {
+    const secretValueResponse = await secretsManagerClient.send(command);
+    if ("SecretString" in secretValueResponse) {
+      return secretValueResponse.SecretString; // Return the secret string
+    }
+  } catch (err) {
+    console.error("Error fetching secret:", err);
+    throw new Error("Could not retrieve secret");
+  }
+}
+
+// Global variable to store access token
 let userAccessToken;
 
 // Sign-Up Route
@@ -35,7 +89,8 @@ router.post("/signup", express.json(), async (req, res) => {
   }
 
   try {
-    await signUp(username, password, email);
+    const client = await initializeCognitoClient(); // Initialize client here
+    await signUp(client, username, password, email);
     res.json({
       message:
         "Signup successful! Please confirm your email using the provided code.",
@@ -47,7 +102,7 @@ router.post("/signup", express.json(), async (req, res) => {
 });
 
 // Sign-Up Function
-async function signUp(username, password, email) {
+async function signUp(client, username, password, email) {
   const command = new SignUpCommand({
     ClientId: clientId,
     Username: username,
@@ -66,12 +121,13 @@ async function signUp(username, password, email) {
   }
 }
 
-// Confirm Code Route (User confirms sign-up with confirmation code)
+// Confirm Code Route
 router.post("/confirm-code", express.json(), async (req, res) => {
   const { username, confirmationCode } = req.body;
 
   try {
-    await confirmSignUp(username, confirmationCode);
+    const client = await initializeCognitoClient(); // Initialize client here
+    await confirmSignUp(client, username, confirmationCode);
     res.json({ message: "Confirmation successful" });
   } catch (err) {
     console.error("Confirmation error:", err);
@@ -82,7 +138,7 @@ router.post("/confirm-code", express.json(), async (req, res) => {
 });
 
 // Confirm Sign-Up Function
-async function confirmSignUp(username, confirmationCode) {
+async function confirmSignUp(client, username, confirmationCode) {
   const command = new ConfirmSignUpCommand({
     ClientId: clientId,
     Username: username,
@@ -101,7 +157,8 @@ router.post("/login", express.json(), async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const response = await authenticateUser(username, password);
+    const client = await initializeCognitoClient(); // Initialize client here
+    const response = await authenticateUser(client, username, password);
 
     if (response) {
       userAccessToken = response.AuthenticationResult.AccessToken; // Store access token
@@ -116,8 +173,8 @@ router.post("/login", express.json(), async (req, res) => {
   }
 });
 
-// Authenticate User Function (MFA removed)
-async function authenticateUser(username, password) {
+// Authenticate User Function
+async function authenticateUser(client, username, password) {
   const authParams = {
     AuthFlow: "USER_PASSWORD_AUTH",
     ClientId: clientId,
@@ -129,7 +186,6 @@ async function authenticateUser(username, password) {
 
   try {
     const response = await client.send(new InitiateAuthCommand(authParams));
-
     if (response.AuthenticationResult) {
       return response; // Return the whole response for access token
     } else {
