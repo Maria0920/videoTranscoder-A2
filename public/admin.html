@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Video Transcoding App</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Admin Page -->
+      <div id="adminPage" class="page-section active">
+        <h1>Welcome to Admin Page!</h1>
+        <div class="profile-info">
+          <img src="/admin.png" alt="Admin Avatar" class="avatar" />
+          <h2>Admin Dashboard</h2>
+          <button onclick="logout()" class="logout-button">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+
+        <!-- Navigation Bar -->
+        <nav>
+          <ul>
+            <li>
+              <a href="#" onclick="showPage('adminVideosList')"
+                >Manage Videos</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="showPage('adminUploadVideo')"
+                >Upload Video</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="showPage('adminTranscodeVideo')"
+                >Transcode Video</a
+              >
+            </li>
+            <li>
+              <a href="#" onclick="showPage('adminUserList')">Manage Users</a>
+            </li>
+          </ul>
+        </nav>
+
+        <!-- Manage Videos Section -->
+        <div id="adminVideosList" class="page-section">
+          <h1>Manage Videos</h1>
+          <div id="adminFileList"></div>
+        </div>
+
+        <!-- Upload Video Section -->
+        <div id="adminUploadVideo" class="page-section">
+          <h1>Upload Video</h1>
+          <input type="file" id="adminVideoUpload" />
+          <button onclick="adminUploadVideo()">Upload</button>
+        </div>
+
+        <!-- Transcode Video Section -->
+        <div id="adminTranscodeVideo" class="page-section">
+          <h1>Transcode Video</h1>
+          <select id="adminVideoSelect"></select>
+          <button onclick="startAdminTranscoding()">Start Transcoding</button>
+          <progress
+            id="adminProgressBar"
+            value="0"
+            max="100"
+            style="display: none"
+          ></progress>
+        </div>
+
+        <!-- Manage Users Section -->
+        <div id="adminUserList" class="page-section">
+          <h1>Manage Users</h1>
+          <div id="userList"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./js/app.js"></script>
+    <script>
+      // Ensure the DOM is fully loaded before executing scripts
+      document.addEventListener("DOMContentLoaded", function () {
+        // Show the default page
+        showPage("adminVideosList");
+      });
+
+      // Function to show different admin pages
+      function showPage(pageId) {
+        const pages = [
+          "adminVideosList",
+          "adminUploadVideo",
+          "adminTranscodeVideo",
+          "adminUserList",
+        ];
+        pages.forEach((page) => {
+          const element = document.getElementById(page);
+          if (element) {
+            element.style.display = page === pageId ? "block" : "none";
+          }
+        });
+      }
+
+      // Dummy functions for demonstration
+      function adminUploadVideo() {
+        // Logic to upload a video
+        alert("Upload video functionality will go here.");
+      }
+
+      function startAdminTranscoding() {
+        // Logic to start transcoding
+        alert("Transcoding video functionality will go here.");
+      }
+
+      function logout() {
+        // Redirect to index.html on logout
+        window.location.href = "index.html";
+      }
+
+      // WebSocket connection for real-time updates
+      const socket = new WebSocket("ws://localhost:3000");
+
+      socket.addEventListener("open", () => {
+        console.log("WebSocket connection established");
+      });
+
+      socket.addEventListener("message", (event) => {
+        console.log("Message received from server:", event.data);
+      });
+
+      socket.addEventListener("close", () => {
+        console.log("WebSocket connection closed");
+      });
+
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket error:", error);
+      });
+    </script>
+  </body>
+</html>

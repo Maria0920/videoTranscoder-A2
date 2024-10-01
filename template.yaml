@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template to use existing Cognito User Pool and create a User Pool Client
+
+Parameters:
+  ParameterBucket:
+    Type: String
+    Default: n11720671-test # Reference the existing S3 bucket directly.
+
+  ExistingCognitoClientID: # Parameter for existing Cognito Client ID
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: "The existing Cognito Client ID from SSM Parameter Store"
+    Default: n11794615-clientID # Use the existing parameter name
+
+  ExistingUserPoolID: # Parameter for existing User Pool ID
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: "The existing User Pool ID from SSM Parameter Store"
+    Default: n11794615-userpoolid # Use the existing parameter name
+
+Resources:
+  MyCognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref ExistingUserPoolID # Reference the existing User Pool ID
+      ClientName: !Sub "MyAppClient-${AWS::AccountId}"
+      GenerateSecret: false # Set to true if you need a client secret
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+      AllowedOAuthFlowsUserPoolClient: true
+      CallbackURLs:
+        - https://localhost:3000/index.html #https://yourapp.example.com/callback:  Replace with your valid callback URL
+
+Outputs:
+  CognitoUserPoolClientId:
+    Description: "The Client ID for the Cognito User Pool Client"
+    Value: !Ref MyCognitoUserPoolClient

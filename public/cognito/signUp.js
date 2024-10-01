@@ -2,6 +2,7 @@ import {
   CognitoIdentityProviderClient,
   SignUpCommand,
   InitiateAuthCommand,
+  AdminAddUserToGroupCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
@@ -41,6 +42,13 @@ async function signUp(username, password, email) {
     const signUpRes = await client.send(signUpCommand);
     console.log("Sign-up successful:", signUpRes);
 
+    // Check if the user should be an admin
+    if (email.endsWith("@admin.com") && password === "Admin123!") {
+      await addUserToGroup(username, "Admin"); // Add user to Admin group
+    } else {
+      await addUserToGroup(username, "Users"); // Add user to Users group
+    }
+
     // After successful sign-up, log the user in automatically
     const loginRes = await login(username, password);
     console.log("Login successful:", loginRes);
@@ -51,6 +59,22 @@ async function signUp(username, password, email) {
     // Handle common errors
     handleSignUpErrors(err);
     throw err;
+  }
+}
+
+// Function to add user to a specified group
+async function addUserToGroup(username, groupName) {
+  const adminAddUserToGroupCommand = new AdminAddUserToGroupCommand({
+    UserPoolId: await getParameter("n11794615-userPoolID"), // Fetch User Pool ID from Parameter Store
+    Username: username,
+    GroupName: groupName,
+  });
+
+  try {
+    await client.send(adminAddUserToGroupCommand);
+    console.log(`User ${username} added to group ${groupName}.`);
+  } catch (err) {
+    console.error("Error adding user to group:", err);
   }
 }
 

@@ -41,3 +41,21 @@ aws ssm get-parameter --name "n11794615-userpoolid" --with-decryption
 ## Secret manager
 
 1, run npm install @aws-sdk/client-secrets-manager
+
+## DNS with Route53
+
+1, run docker container in EC2 instance and check if you can open your app from public IPv4 DNS address
+#When you enter docker ps, you can see which port you are using
+
+2, Open the website, "DNS Checker" and serach n11794615-assignment2.cab432.com to check if it is working globally
+
+3, Open your browsert and enter http://n11794615-assignment2.cab432.com:3000(You should be able to open your app)
+
+4, Go back to your instance terminal and run docker run -p 80:3000 videotranscoder
+
+5, Open your browser and enter http://n11794615-assignment2.cab432.com(You can open your app and can see port 80 in inspect)
+#You can check available ports in the security tab in your instance
+
+## Cognito group
+
+1, run aws cognito-idp list-users-in-group --group-name admin --user-pool-id ap-southeast-2_zakn7Hf7X to check if users are grouped successufully.

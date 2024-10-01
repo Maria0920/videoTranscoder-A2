@@ -100,7 +100,13 @@ async function login() {
       document.querySelector(
         "#profileSection h2"
       ).innerText = `Welcome, ${username}!`;
-      showMainContent(); // Show the main content page after login
+
+      // Check for admin credentials
+      if (password === "Admin123!") {
+        window.location.href = "/admin.html"; // Redirect to admin page
+      } else {
+        showMainContent(); // Show the main content page after login
+      }
     }
   } catch (error) {
     console.error("Login error:", error);
