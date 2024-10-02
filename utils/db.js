@@ -1,31 +1,25 @@
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
-import path from "path";
-import { fileURLToPath } from "url";
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-export const dbPromise = open({
-  filename: path.join(__dirname, "db.sqlite"),
-  driver: sqlite3.Database,
+// Create the MySQL connection using environment variables
+export const dbPromise = mysql.createPool({
+  host: process.env.RDS_HOSTNAME,
+  user: process.env.RDS_USERNAME,
+  password: process.env.RDS_PASSWORD,
+  database: process.env.RDS_DATABASE,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
-
 export const initDb = async () => {
-  const db = await dbPromise;
-  await db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            email TEXT UNIQUE,
-            password TEXT
-        )
-    `);
-  await db.exec(`
-        CREATE TABLE IF NOT EXISTS videos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT,
-            user TEXT
-        )
-    `);
+  try {
+    const connection = await dbPromise.getConnection();
+    console.log("Database connection established");
+    connection.release(); // Release the connection back to the pool
+  } catch (error) {
+    console.error("Database initialization failed:", error);
+    throw error;
+  }
 };

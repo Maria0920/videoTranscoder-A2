@@ -164,3 +164,141 @@ function showMainContent() {
   document.getElementById("loginPage").style.display = "none"; // Hide login page
   document.getElementById("mainContent").style.display = "block"; // Show main content
 }
+
+function showPage(pageId) {
+  // Hide all sections and show the selected one
+  const sections = document.querySelectorAll(".page-section");
+  sections.forEach((section) => {
+    section.style.display = "none"; // Hide all sections
+  });
+
+  const selectedSection = document.getElementById(pageId);
+  if (selectedSection) {
+    selectedSection.style.display = "block"; // Show the selected section
+  }
+
+  // Update the browser URL without reloading the page
+  history.pushState(null, pageId, `/${pageId}`);
+}
+
+// Handle the back/forward buttons in the browser
+window.addEventListener("popstate", (event) => {
+  const path = window.location.pathname.replace("/", "");
+  if (path) {
+    showPage(path);
+  } else {
+    showPage("videosList"); // Default page
+  }
+});
+
+async function loadFiles() {
+  try {
+    const response = await fetch("/files", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+
+    if (response.ok) {
+      const files = await response.json();
+      renderFileList(files);
+    } else {
+      alert("Failed to load files");
+    }
+  } catch (error) {
+    console.error("Load files error:", error);
+    alert("An error occurred while loading files");
+  }
+}
+
+function renderFileList(files) {
+  const fileList = document.getElementById("fileList");
+  fileList.innerHTML = ""; // Clear the existing list
+
+  files.forEach((file) => {
+    // Create and populate the file list with thumbnails and buttons
+    const div = document.createElement("div");
+    div.classList.add("file-item");
+
+    const img = document.createElement("img");
+    img.src = file.thumbnailUrl;
+    img.alt = file.filename;
+    img.classList.add("thumbnail");
+
+    const filename = document.createElement("div");
+    filename.textContent = file.filename;
+
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
+    deleteButton.classList.add("delete-button"); // Add the delete button class
+    deleteButton.onclick = () => deleteFile(file.id);
+
+    const downloadButton = document.createElement("button");
+    downloadButton.textContent = "Download";
+    downloadButton.classList.add("download-button"); // Add the download button class
+    downloadButton.onclick = () => downloadFile(file.id, file.filename);
+
+    div.appendChild(img);
+    div.appendChild(filename);
+    div.appendChild(deleteButton);
+    div.appendChild(downloadButton);
+
+    fileList.appendChild(div);
+
+    // Option element for the "Transcode Video" dropdown
+    const option = document.createElement("option");
+    option.value = file.id; // or file.filename if needed
+    option.textContent = file.filename;
+
+    // Option to the dropdown
+    const videoSelect = document.getElementById("videoSelect"); // Ensure videoSelect is defined
+    if (videoSelect) {
+      videoSelect.appendChild(option);
+    }
+  });
+}
+
+async function deleteFile(fileId) {
+  if (!confirm("Are you sure you want to delete this file?")) return;
+
+  try {
+    const response = await fetch(`/files/${fileId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+
+    if (response.ok) {
+      alert("File deleted successfully");
+      loadFiles(); // Reload the files after deletion
+    } else {
+      alert("Failed to delete file");
+    }
+  } catch (error) {
+    console.error("Delete file error:", error);
+    alert("An error occurred while deleting the file");
+  }
+}
+
+async function downloadFile(fileId, filename) {
+  try {
+    const response = await fetch(`/files/${fileId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      alert("Failed to download file");
+    }
+  } catch (error) {
+    console.error("Download file error:", error);
+    alert("An error occurred while downloading the file");
+  }
+}

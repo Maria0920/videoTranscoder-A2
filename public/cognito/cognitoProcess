@@ -2,13 +2,6 @@
 2, run npm install aws-jwt-verify
 npm install @aws-sdk/client-cognito-identity-provider
 npm install amazon-cognito-identity-js
-
-## Configure AWS Credentials
-
-1, Open prompt command
-2, For windows, Run setx AWS_ACCESS_KEY_ID "ASIA5DYSEEJ42B2GGZWP"
-setx AWS_SECRET_ACCESS_KEY "FyhpoPnW0z2D+8Eh8lYe8B42gDlxlMNIkvQc/AJy" S
-
 npm install speakeasy qrcode
 
 npm install @react-oauth/google
@@ -16,6 +9,12 @@ npm install google-auth-library
 npm install @react-oauth/google react-router-dom
 
 npm install qrcode.react
+
+## Configure AWS Credentials
+
+1, Open prompt command
+2, For windows, Run setx AWS_ACCESS_KEY_ID "ASIA5DYSEEJ42B2GGZWP"
+setx AWS_SECRET_ACCESS_KEY "FyhpoPnW0z2D+8Eh8lYe8B42gDlxlMNIkvQc/AJy" S
 
 ## parameter
 
