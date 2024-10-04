@@ -9,10 +9,10 @@ import { initDb } from "./utils/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager"; // Import SecretsManagerClient
+import dotenv from "dotenv"; // Import dotenv
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Initialize Database
 initDb()
@@ -69,78 +69,55 @@ app.use(express.json());
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Initialize Secrets Manager client
-const secretsManagerClient = new SecretsManagerClient({
-  region: "ap-southeast-2",
-}); // Your AWS region
-
-// Fetch session secret from AWS Secrets Manager
-async function fetchSessionSecret() {
-  const command = new GetSecretValueCommand({
-    SecretId: "n11794615-jwt-secret",
-  });
-
-  try {
-    const secretValueResponse = await secretsManagerClient.send(command);
-    if ("SecretString" in secretValueResponse) {
-      return secretValueResponse.SecretString; // Return the secret string
-    }
-  } catch (err) {
-    console.error("Error fetching secret:", err);
-    throw new Error("Could not retrieve session secret");
-  }
-}
-
 // Configure session
-const setupSession = async () => {
-  const secretKey = await fetchSessionSecret(); // Fetch the session secret
-
+const setupSession = () => {
+  const secretKey = process.env.SECRET_KEY; // Load the session secret from .env
   app.use(
     session({
       secret: secretKey,
       resave: false,
       saveUninitialized: true,
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        httpOnly: true,
+      },
     })
   );
 };
 
-// Initialize session and routes
-setupSession()
-  .then(() => {
-    // Route handlers
-    app.use("/auth", authRoutes); // Authentication routes
-    app.use("/files", fileRoutes); // File handling routes
-    app.use("/videos", videoRoutes); // Video handling routes
+// Initialize session
+setupSession();
 
-    // Serve signup page (if necessary)
-    app.get("/signup", (req, res) => {
-      res.sendFile(path.join(__dirname, "public", "signup.html"));
-    });
+// Route handlers
+app.use("/auth", authRoutes); // Authentication routes
+app.use("/files", fileRoutes); // File handling routes
+app.use("/videos", videoRoutes); // Video handling routes
 
-    // Serve index.html for other routes
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "public", "index.html"));
-    });
+// Serve signup page (if necessary)
+app.get("/signup", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "signup.html"));
+});
 
-    // Logout route
-    app.get("/logout", (req, res) => {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Error destroying session:", err);
-          return res.status(500).send("Error logging out");
-        }
-        res.redirect("/");
-      });
-    });
+// Serve index.html for other routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
-    // Start server
-    server.listen(port, () => {
-      console.log(`Server running at http://localhost:${port}`);
-    });
-  })
-  .catch((err) => {
-    console.error("Error setting up session:", err);
+// Logout route
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying session:", err);
+      return res.status(500).send("Error logging out");
+    }
+    res.redirect("/");
   });
+});
+
+// Start server
+server.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
 
 // Exporting the WebSocket server
 export { wss };

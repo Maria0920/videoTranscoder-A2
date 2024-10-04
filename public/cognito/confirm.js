@@ -1,10 +1,14 @@
 import {
   CognitoIdentityProviderClient,
-  ConfirmSignUpCommand,
+  InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import dotenv from "dotenv";
 
-const region = "ap-southeast-2"; // Your AWS region
+// Load environment variables from .env file
+dotenv.config();
+
+const region = process.env.AWS_REGION; // Use AWS region from .env
 
 // Create SSM Client
 const ssmClient = new SSMClient({ region });
@@ -19,32 +23,81 @@ async function getParameter(name) {
   return response.Parameter.Value;
 }
 
-async function confirmSignUp(username, confirmationCode) {
-  console.log("Confirming sign-up");
+// Function to handle user login
+async function login(username, password) {
+  console.log("Logging in with:", username); // Log the username
 
-  // Fetch Client ID from Parameter Store
-  const clientId = await getParameter("n11794615-clientID");
-
+  const clientId = await getParameter(process.env.CLIENT_ID); // Fetch Client ID from Parameter Store
   const client = new CognitoIdentityProviderClient({ region });
 
-  const command = new ConfirmSignUpCommand({
+  const command = new InitiateAuthCommand({
+    AuthFlow: "USER_PASSWORD_AUTH",
     ClientId: clientId,
-    Username: username,
-    ConfirmationCode: confirmationCode,
+    AuthParameters: {
+      USERNAME: username,
+      PASSWORD: password,
+    },
   });
 
   try {
-    const res = await client.send(command);
-    console.log("Confirmation Response:", res);
-    return res;
+    const response = await client.send(command);
+    console.log("Login successful:", response);
+
+    const { AccessToken, IdToken, RefreshToken } =
+      response.AuthenticationResult;
+    storeTokens(AccessToken, IdToken, RefreshToken);
+
+    console.log("Login completed without MFA");
+    return response; // Return the response for further use
   } catch (err) {
-    console.error("Error confirming sign-up:", err);
-    throw err;
+    console.error("Login error:", err);
+    handleLoginError(err);
+    throw err; // Rethrow error if needed
   }
 }
 
-// Example usage
-const username = "exampleuser";
-const confirmationCode = "123456"; // Code received in the email
+// Function to securely store the tokens (e.g., in localStorage or sessionStorage)
+function storeTokens(accessToken, idToken, refreshToken) {
+  localStorage.setItem("accessToken", accessToken);
+  localStorage.setItem("idToken", idToken);
+  localStorage.setItem("refreshToken", refreshToken);
+  console.log("Tokens stored successfully:", {
+    accessToken,
+    idToken,
+    refreshToken,
+  });
+}
 
-confirmSignUp(username, confirmationCode);
+// Function to handle different types of login errors
+function handleLoginError(err) {
+  console.error("Error details:", err);
+  switch (err.name) {
+    case "UserNotFoundException":
+      console.error("The username does not exist.");
+      break;
+    case "NotAuthorizedException":
+      console.error("The username or password is incorrect.");
+      break;
+    case "UserNotConfirmedException":
+      console.error("The user is not confirmed. Please confirm your account.");
+      break;
+    case "PasswordResetRequiredException":
+      console.error("Password reset is required.");
+      break;
+    case "InvalidParameterException":
+      console.error("Invalid parameters. Check the input values.");
+      break;
+    default:
+      console.error(`Unexpected error: ${err.message}`);
+  }
+}
+
+// Example usage (optional)
+const username = "exampleuser";
+const password = "SecurePassword123!";
+
+login(username, password)
+  .then(() => console.log("User logged in successfully!"))
+  .catch((err) => console.error("Login failed:", err));
+
+export { login }; // Export the login function if needed in other files

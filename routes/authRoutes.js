@@ -6,69 +6,25 @@ import {
   ConfirmSignUpCommand,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager"; // Import SecretsManagerClient
+import dotenv from "dotenv"; // Import dotenv
+
+// Load environment variables from .env file
+dotenv.config();
 
 const router = express.Router();
 
 // Configuration Details
 const region = "ap-southeast-2"; // Your AWS Region
-let JWT_SECRET; // Initialize JWT_SECRET
-const ssmClient = new SSMClient({ region });
-const secretsManagerClient = new SecretsManagerClient({ region }); // Initialize Secrets Manager client
-let clientId = "";
-let userPoolId = "";
+const JWT_SECRET = process.env.SECRET_KEY; // Load JWT secret from .env
+const clientId = process.env.CLIENT_ID; // Load client ID from .env
+const userPoolId = process.env.USER_POOL_ID; // Load user pool ID from .env
 
 // Initialize Cognito Client
-async function initializeCognitoClient() {
-  await fetchParameters();
-  JWT_SECRET = await fetchSecret("n11794615-jwt-secret"); // Fetch JWT secret
+function initializeCognitoClient() {
   if (!clientId || !userPoolId) {
     throw new Error("Client ID or User Pool ID is null");
   }
   return new CognitoIdentityProviderClient({ region });
-}
-
-// Fetch parameters from AWS Parameter Store
-async function fetchParameters() {
-  const clientIdCommand = new GetParameterCommand({
-    Name: "n11794615-clientID",
-    WithDecryption: true,
-  });
-
-  const userPoolIdCommand = new GetParameterCommand({
-    Name: "n11794615-userpoolid",
-    WithDecryption: true,
-  });
-
-  try {
-    const clientIdResponse = await ssmClient.send(clientIdCommand);
-    clientId = clientIdResponse.Parameter.Value;
-
-    const userPoolIdResponse = await ssmClient.send(userPoolIdCommand);
-    userPoolId = userPoolIdResponse.Parameter.Value;
-  } catch (err) {
-    console.error("Error fetching parameters:", err);
-    throw new Error("Could not retrieve Cognito configuration");
-  }
-}
-
-// Fetch secret from AWS Secrets Manager
-async function fetchSecret(secretName) {
-  const command = new GetSecretValueCommand({ SecretId: secretName });
-
-  try {
-    const secretValueResponse = await secretsManagerClient.send(command);
-    if ("SecretString" in secretValueResponse) {
-      return secretValueResponse.SecretString; // Return the secret string
-    }
-  } catch (err) {
-    console.error("Error fetching secret:", err);
-    throw new Error("Could not retrieve secret");
-  }
 }
 
 // Global variable to store access token
@@ -89,7 +45,7 @@ router.post("/signup", express.json(), async (req, res) => {
   }
 
   try {
-    const client = await initializeCognitoClient(); // Initialize client here
+    const client = initializeCognitoClient(); // Initialize client here
     await signUp(client, username, password, email);
     res.json({
       message:
@@ -126,7 +82,7 @@ router.post("/confirm-code", express.json(), async (req, res) => {
   const { username, confirmationCode } = req.body;
 
   try {
-    const client = await initializeCognitoClient(); // Initialize client here
+    const client = initializeCognitoClient(); // Initialize client here
     await confirmSignUp(client, username, confirmationCode);
     res.json({ message: "Confirmation successful" });
   } catch (err) {
@@ -157,7 +113,7 @@ router.post("/login", express.json(), async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const client = await initializeCognitoClient(); // Initialize client here
+    const client = initializeCognitoClient(); // Initialize client here
     const response = await authenticateUser(client, username, password);
 
     if (response) {

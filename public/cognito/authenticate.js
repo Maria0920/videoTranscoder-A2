@@ -5,8 +5,13 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import dotenv from "dotenv";
 
-const region = "ap-southeast-2"; // Your AWS region
+// Load environment variables from .env file
+dotenv.config();
+
+// Use environment variables for AWS region and parameter names
+const region = process.env.AWS_REGION; // Your AWS region
 
 // Create SSM Client
 const ssmClient = new SSMClient({ region });
@@ -23,8 +28,8 @@ async function getParameter(name) {
 
 async function setup() {
   // Fetch User Pool ID and Client ID from Parameter Store
-  const userPoolId = await getParameter("n11794615-userpoolid");
-  const clientId = await getParameter("n11794615-clientID");
+  const userPoolId = await getParameter(process.env.USER_POOL_ID); // Use environment variable
+  const clientId = await getParameter(process.env.CLIENT_ID); // Use environment variable
 
   const accessVerifier = CognitoJwtVerifier.create({
     userPoolId: userPoolId,
