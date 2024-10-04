@@ -48,7 +48,7 @@ aws ssm get-parameter --name "n11794615-userpoolid" --with-decryption
 
 2, Open the website, "DNS Checker" and serach n11794615-assignment2.cab432.com to check if it is working globally
 
-3, Open your browsert and enter http://n11794615-assignment2.cab432.com:3000(You should be able to open your app)
+3, Open your browser and enter http://n11794615-assignment2.cab432.com:3000(You should be able to open your app)
 
 4, Go back to your instance terminal and run docker run -p 80:3000 videotranscoder
 
