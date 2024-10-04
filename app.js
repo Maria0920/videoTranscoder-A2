@@ -3,14 +3,16 @@ import session from "express-session";
 import fileUpload from "express-fileupload";
 import path from "path";
 import { fileURLToPath } from "url";
-import "dotenv/config"; // Load environment variables from .env
-import http from "http"; // Import HTTP module
+import http from "http";
 import { WebSocketServer } from "ws";
 import { initDb } from "./utils/db.js";
+import authRoutes from "./routes/authRoutes.js";
+import fileRoutes from "./routes/fileRoutes.js";
+import videoRoutes from "./routes/videoRoutes.js";
 import {
   SecretsManagerClient,
   GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager"; // AWS Secrets Manager import
+} from "@aws-sdk/client-secrets-manager"; // Import SecretsManagerClient
 
 // Initialize Database
 initDb()
@@ -24,13 +26,11 @@ initDb()
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize express app
 const app = express();
 const port = 3000;
 
-const server = http.createServer(app); // Create an HTTP server with Express
-
-// Create a WebSocket server on top of the HTTP server
+// Create HTTP server and WebSocket server
+const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 // Handle WebSocket connections and reconnections
@@ -64,23 +64,20 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Serve static files from 'public' directory
+// Middleware setup
+app.use(express.json());
+app.use(fileUpload());
 app.use(express.static(path.join(__dirname, "public")));
-
-// Import routes
-import authRoutes from "./routes/authRoutes.js";
-import fileRoutes from "./routes/fileRoutes.js";
-import videoRoutes from "./routes/videoRoutes.js";
 
 // Initialize Secrets Manager client
 const secretsManagerClient = new SecretsManagerClient({
-  region: "ap-southeast-2", // Your AWS region
-});
+  region: "ap-southeast-2",
+}); // Your AWS region
 
 // Fetch session secret from AWS Secrets Manager
 async function fetchSessionSecret() {
   const command = new GetSecretValueCommand({
-    SecretId: "n11794615-jwt-secret", // Your secret ID
+    SecretId: "n11794615-jwt-secret",
   });
 
   try {
@@ -96,21 +93,16 @@ async function fetchSessionSecret() {
 
 // Configure session
 const setupSession = async () => {
-  const secretKey = await fetchSessionSecret(); // Fetch the session secret from AWS Secrets Manager or fallback to dotenv
+  const secretKey = await fetchSessionSecret(); // Fetch the session secret
 
   app.use(
     session({
-      secret: secretKey || process.env.SECRET_KEY, // Use AWS secret or .env fallback
+      secret: secretKey,
       resave: false,
       saveUninitialized: true,
     })
   );
 };
-
-// Middleware setup
-app.use(express.json());
-app.use(fileUpload());
-app.use(express.static("public"));
 
 // Initialize session and routes
 setupSession()
@@ -120,12 +112,12 @@ setupSession()
     app.use("/files", fileRoutes); // File handling routes
     app.use("/videos", videoRoutes); // Video handling routes
 
-    // Serve signup page
+    // Serve signup page (if necessary)
     app.get("/signup", (req, res) => {
       res.sendFile(path.join(__dirname, "public", "signup.html"));
     });
 
-    // Serve index.html for other routes (SPA catch-all)
+    // Serve index.html for other routes
     app.get("*", (req, res) => {
       res.sendFile(path.join(__dirname, "public", "index.html"));
     });
@@ -150,5 +142,5 @@ setupSession()
     console.error("Error setting up session:", err);
   });
 
-// Export WebSocket server
+// Exporting the WebSocket server
 export { wss };
