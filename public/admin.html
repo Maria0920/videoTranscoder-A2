@@ -50,7 +50,14 @@
         <!-- Manage Videos Section -->
         <div id="adminVideosList" class="page-section">
           <h1>Manage Videos</h1>
-          <div id="adminFileList"></div>
+          <div id="adminFileList">
+            <!-- Example video item -->
+            <div class="video-item">
+              <span>Video Title 1</span>
+              <button onclick="deleteVideo('videoId1')">Delete</button>
+            </div>
+            <!-- Add more video items dynamically -->
+          </div>
         </div>
 
         <!-- Upload Video Section -->
@@ -76,7 +83,14 @@
         <!-- Manage Users Section -->
         <div id="adminUserList" class="page-section">
           <h1>Manage Users</h1>
-          <div id="userList"></div>
+          <div id="userList">
+            <!-- Example user item -->
+            <div class="user-item">
+              <span>User1</span>
+              <button onclick="deleteUser('userId1')">Delete</button>
+            </div>
+            <!-- Add more user items dynamically -->
+          </div>
         </div>
       </div>
     </div>
@@ -87,6 +101,7 @@
       document.addEventListener("DOMContentLoaded", function () {
         // Show the default page
         showPage("adminVideosList");
+        connectWebSocket(); // Establish the WebSocket connection
       });
 
       // Function to show different admin pages
@@ -105,7 +120,20 @@
         });
       }
 
-      // Dummy functions for demonstration
+      // Function to delete a video
+      function deleteVideo(videoId) {
+        // Logic to delete a video, e.g., sending a request to the server
+        alert("Deleting video with ID: " + videoId);
+        // TODO: Implement server call to delete the video
+      }
+
+      // Function to delete a user
+      function deleteUser(userId) {
+        // Logic to delete a user, e.g., sending a request to the server
+        alert("Deleting user with ID: " + userId);
+        // TODO: Implement server call to delete the user
+      }
+
       function adminUploadVideo() {
         // Logic to upload a video
         alert("Upload video functionality will go here.");
@@ -121,24 +149,60 @@
         window.location.href = "index.html";
       }
 
-      // WebSocket connection for real-time updates
-      const socket = new WebSocket("ws://localhost:3000");
+      // Function to establish a WebSocket connection
+      function connectWebSocket() {
+        const socket = new WebSocket("ws://localhost:3000");
 
-      socket.addEventListener("open", () => {
-        console.log("WebSocket connection established");
-      });
+        socket.addEventListener("open", () => {
+          console.log("WebSocket connection established");
+          notifyUserConnectionEstablished();
+        });
 
-      socket.addEventListener("message", (event) => {
-        console.log("Message received from server:", event.data);
-      });
+        socket.addEventListener("message", (event) => {
+          console.log("Message received from server:", event.data);
+        });
 
-      socket.addEventListener("close", () => {
-        console.log("WebSocket connection closed");
-      });
+        socket.addEventListener("close", () => {
+          console.log("WebSocket connection closed");
+          notifyUserConnectionLost();
+          attemptReconnect(); // Start reconnection attempts
+        });
 
-      socket.addEventListener("error", (error) => {
-        console.error("WebSocket error:", error);
-      });
+        socket.addEventListener("error", (error) => {
+          console.error("WebSocket error:", error);
+        });
+
+        return socket; // Return the socket instance if needed
+      }
+
+      // Function to attempt reconnection
+      function attemptReconnect() {
+        console.log("Attempting to reconnect...");
+        setTimeout(() => {
+          const newSocket = connectWebSocket(); // Re-establish the WebSocket connection
+
+          newSocket.addEventListener("open", () => {
+            console.log("WebSocket reconnected");
+            notifyUserConnectionEstablished();
+          });
+
+          newSocket.addEventListener("close", () => {
+            attemptReconnect(); // Try reconnecting again if it closes
+          });
+        }, 5000); // Retry every 5 seconds
+      }
+
+      // Function to notify the user of connection establishment
+      function notifyUserConnectionEstablished() {
+        console.log("You are connected to the server.");
+        // You can also display this message on the UI
+      }
+
+      // Function to notify the user of connection loss
+      function notifyUserConnectionLost() {
+        alert("Connection lost. Attempting to reconnect...");
+        // You can also display this message on the UI
+      }
     </script>
   </body>
 </html>

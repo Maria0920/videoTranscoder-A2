@@ -1,4 +1,4 @@
-# Assignment 1 - Web Server - Response to Criteria
+# Assignment 2 - Web Server - Response to Criteria
 
 ## Instructions
 
@@ -61,8 +61,7 @@
 - **Why is are the other services used not suitable for this data?:** [eg. Advanced video search requires complex querries which are not available on S3 and inefficient on DynamoDB]
 - **Bucket/instance/table name:**
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
 
 ### S3 Pre-signed URLs
 
@@ -78,8 +77,7 @@
 - **What data is being cached?:** [eg. Thumbnails from YouTube videos obatined from external API]
 - **Why is this data likely to be accessed frequently?:** [ eg. Thumbnails from popular YouTube videos are likely to be shown to multiple users ]
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
 
 ### Core - Statelessness
 
@@ -93,43 +91,59 @@
 
 ### Graceful handling of persistent connections
 
-- **Type of persistent connection and use:** [eg. server-side-events for progress reporting]
-- **Method for handling lost connections:** [eg. client responds to lost connection by reconnecting and indicating loss of connection to user until connection is re-established ]
+- **Type of persistent connection and use:** The application utilises WebSockets for real-time communication between the client and server. This connection is established after a user signs up and remains open while the user interacts with the application. The WebSocket facilitates efficient progress reporting for various actions, such as video uploads and transcoding, allowing the server to send immediate updates to the client without needing to refresh the page or make additional requests.
+- **Method for handling lost connections:** Objective: To ensure a seamless user experience during network disruptions by implementing a responsive mechanism that handles lost connections effectively.
+  1, Detecting Connection Loss: The client continuously monitors the WebSocket connection. If a connection is lost (e.g., the server is unreachable), an event listener is triggered.
+  2, Automatic Reconnection: The client automatically attempts to reconnect to the WebSocket server after a brief delay (e.g., 3 seconds). This minimizes user interruption and aims to restore functionality without manual intervention.
+  The reconnection attempts can continue at specified intervals until the connection is successfully re-established.
+  3, Updating the UI: Once the connection is successfully re-established, the client updates the UI to reflect the current status (e.g., “Connected”).
+  If applicable, any messages or data that were missed during the disconnection can be fetched or displayed to the user to ensure continuity.
+  4, Graceful Handling of Reconnection Failures: If reconnection attempts fail after several tries, the client can provide additional feedback, suggesting that users check their network connection or try again later. This prevents user confusion and frustration.
+  5, Logging for Troubleshooting: Each connection loss and reconnection attempt is logged for troubleshooting purposes, enabling developers to analyze and improve connection stability.
 - **Relevant files:**
-  -
+  -signUp.html
+  -index.html
+  -admin.html
+  -app.js
 
 ### Core - Authentication with Cognito
 
-- **User pool name:**
-- **How are authentication tokens handled by the client?:** [eg. Response to login request sets a cookie containing the token.]
-- **Video timestamp:**
-- **Relevant files:**
-  -
+- **User pool name:** n11794615-cognito-prac
+- **How are authentication tokens handled by the client?:** When a user signs up, their username and password are manually stored in AWS Cognito's User Pool, either via the AWS SDK or Cognito console. Cognito securely manages user credentials, including encrypted password storage. Upon login, Cognito verifies the credentials and generates a JWT containing the AccessToken and IdToken. These tokens are returned to the client, which can store them (e.g., in local storage) and include them in the Authorization header of subsequent requests for authentication and authorization.
+- **Video timestamp:**00:04
+- ## **Relevant files:**
+  -signUp.js
+  -login.js
+  -authRoutes.js
+  -app.js
 
 ### Cognito multi-factor authentication
 
-- **What factors are used for authentication:** [eg. password, SMS code]
+- **What factors are used for authentication:** The application attempted to implement Multi-Factor Authentication (MFA) using Time-Based One-Time Passwords (TOTP). However, the function is currently not operational.
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
+  -codeConfirmation.html
+  -app.js
 
 ### Cognito federated identities
 
-- **Identity providers used:**
-- **Video timestamp:**
-- **Relevant files:**
-  -
+- **Identity providers used:** The application uses Amazon Cognito for authentication, with Google as the federated identity provider. Users can sign in using their Google account through the "Login with Google" button, which redirects them to Cognito's Hosted UI. This allows seamless authentication via OAuth 2.0, where Cognito manages the user’s identity and tokens, ensuring secure access to the application.
+- **Video timestamp:**00:10
+- ## **Relevant files:**
+  -index.html
 
 ### Cognito groups
 
-- **How are groups used to set permissions?:** [eg. 'admin' users can delete and ban other users]
+- **How are groups used to set permissions?:** Amazon Cognito user groups enable role-based access control, defining two primary roles: Admins and Standard Users. Admin permissions include the ability to delete users and manage video content (uploading and deleting videos). In contrast, Standard Users have limited permissions, primarily allowing them to upload their own videos. Upon login, the application checks user group membership in Cognito to categorse users, restricting access to features based on their roles. This process enhances security and user experience. Utilising user groups within Amazon Cognito ensures clear and consistent permissions for secure user management.
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
+  -admin.html
+  -signUp.js
+  -login.js
 
 ### Core - DNS with Route53
 
-- **Subdomain**: [eg. myawesomeapp.cab432.com]
+- **Subdomain**: n11794615-assignment2.cab432.com
 - **Video timestamp:**
 
 ### Custom security groups
@@ -153,36 +167,50 @@ General outbound traffic: The outbound rule allows the instance to communicate f
 
 ### Parameter store
 
-- **Parameter names:** [eg. n1234567/base_url]
+- **Parameter names:** n11794615-clientID, n11794615-userpoolid
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
+  -authenticate.js
+  -confirm.js
+  -signUp.js
+  -login.js
+  -authRoutes.js
 
 ### Secrets manager
 
-- **Secrets names:** [eg. n1234567-youtube-api-key]
+- **Secrets names:** n11794615-jwt-secret
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
+  -app.js
+  -authRoutes.js
+  -secretManager.js
 
 ### Infrastructure as code
 
 - **Technology used:**
-- **Services deployed:**
+  Infrastructure as Code Tool: AWS CloudFormation
+  Version: 2010-09-09
+  Language: YAML
+- **Services deployed:** AWS Cognito:Used for managing user authentication and authorization.
+  Components:
+  User Pool: An existing Cognito User Pool referenced through SSM Parameter Store.
+  User Pool Client: A client application associated with the Cognito User Pool to handle user sign-ups and sign-ins.
+  Parameters:
+  ParameterBucket: Allows referencing an existing S3 bucket directly.
+  ExistingCognitoClientID: Fetches the existing Cognito Client ID from the AWS Systems Manager Parameter Store.
+  ExistingUserPoolID: Fetches the existing User Pool ID from the AWS Systems Manager Parameter Store.
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
+  -template.yaml
 
 ### Other (with prior approval only)
 
 - **Description:**
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**
 
 ### Other (with prior permission only)
 
 - **Description:**
 - **Video timestamp:**
-- **Relevant files:**
-  -
+- ## **Relevant files:**

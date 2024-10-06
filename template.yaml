@@ -1,28 +1,32 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Template to use existing Cognito User Pool and create a User Pool Client
+Description: Template to use existing Cognito User Pool and create a User Pool Client, along with Route 53 record and RDS configurations.
 
 Parameters:
   ParameterBucket:
     Type: String
-    Default: n11720671-test # Reference the existing S3 bucket directly.
+    Default: n11720671-test
 
-  ExistingCognitoClientID: # Parameter for existing Cognito Client ID
+  ExistingCognitoClientID:
     Type: AWS::SSM::Parameter::Value<String>
     Description: "The existing Cognito Client ID from SSM Parameter Store"
-    Default: n11794615-clientID # Use the existing parameter name
+    Default: n11794615-clientID
 
-  ExistingUserPoolID: # Parameter for existing User Pool ID
+  ExistingUserPoolID:
     Type: AWS::SSM::Parameter::Value<String>
     Description: "The existing User Pool ID from SSM Parameter Store"
-    Default: n11794615-userpoolid # Use the existing parameter name
+    Default: n11794615-userpoolid
+
+  VPCId: # Parameter for existing VPC ID
+    Type: String
+    Description: "The existing VPC ID"
 
 Resources:
   MyCognitoUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      UserPoolId: !Ref ExistingUserPoolID # Reference the existing User Pool ID
+      UserPoolId: !Ref ExistingUserPoolID
       ClientName: !Sub "MyAppClient-${AWS::AccountId}"
-      GenerateSecret: false # Set to true if you need a client secret
+      GenerateSecret: false
       AllowedOAuthFlows:
         - code
       AllowedOAuthScopes:
@@ -31,7 +35,32 @@ Resources:
         - openid
       AllowedOAuthFlowsUserPoolClient: true
       CallbackURLs:
-        - https://localhost:3000/index.html #https://yourapp.example.com/callback:  Replace with your valid callback URL
+        - https://localhost:3000/index.html
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable SSH and MySQL access"
+      VpcId: !Ref VPCId # Reference the VPC ID parameter
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0 # Allow SSH from anywhere; restrict as needed
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0 # Allow MySQL access from anywhere; restrict as needed
+
+  # MyDNSRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Properties:
+  #     HostedZoneId: Z0139834403WUPGWC3UN
+  #     Name: "ftvidnew1.cab432.com."
+  #     Type: A
+  #     TTL: 300
+  #     ResourceRecords:
+  #       - !GetAtt MyCognitoUserPoolClient.ClientId # Ensure it points to a valid resource
 
 Outputs:
   CognitoUserPoolClientId:

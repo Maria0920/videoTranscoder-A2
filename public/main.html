@@ -12,19 +12,13 @@
   </head>
   <body>
     <div id="app">
-      <!-- Login Page -->
-      <div id="loginPage" class="page-section active">
-        <h1>Welcome to Video Transcoding App</h1>
-        <p id="errorMessage" style="color: red"></p>
-        <p>Please wait while we redirect you...</p>
-      </div>
-
-      <!-- Main Content Sections (hidden by default) -->
-      <div id="mainContent" style="display: none">
+      <!-- Main Content Sections (visible after login) -->
+      <div id="mainContent" style="display: block">
+        <!-- Profile Section (Greeting and Avatar) -->
         <div id="profileSection">
           <div class="profile-info">
             <img src="/user.png" alt="Avatar" class="avatar" />
-            <h2 id="userGreeting"></h2>
+            <h2>Welcome !</h2>
             <button onclick="logout()" class="logout-button">
               <i class="fas fa-sign-out-alt"></i> Logout
             </button>
@@ -72,37 +66,33 @@
       </div>
     </div>
 
+    <script src="./js/app.js"></script>
     <script>
-      // Handle Cognito redirect after login
-      window.onload = function () {
-        const authToken = getAuthTokenFromUrl();
-        if (authToken) {
-          localStorage.setItem("authToken", authToken);
-          showMainContent();
-        } else {
-          document.getElementById("errorMessage").textContent =
-            "Authentication failed. Please try again.";
-        }
-      };
-
-      // Extract the token from the URL after login
-      function getAuthTokenFromUrl() {
-        const urlParams = new URLSearchParams(window.location.hash.substr(1));
-        return urlParams.get("id_token") || urlParams.get("access_token");
-      }
-
-      // Show main content if authentication is successful
-      function showMainContent() {
-        const userGreeting = "Hello, User!";
-        document.getElementById("userGreeting").textContent = userGreeting;
-        document.getElementById("loginPage").style.display = "none";
-        document.getElementById("mainContent").style.display = "block";
-      }
-
       function logout() {
-        localStorage.removeItem("authToken");
-        location.href = "/index.html"; // Redirect back to login page after logout
+        // Perform any necessary cleanup (e.g., clearing tokens, user data)
+
+        // Redirect to index.html
+        window.location.href = "index.html";
       }
+
+      // Create a WebSocket connection
+      const socket = new WebSocket("ws://localhost:3000");
+
+      socket.addEventListener("open", () => {
+        console.log("WebSocket connection established");
+      });
+
+      socket.addEventListener("message", (event) => {
+        console.log("Message received from server:", event.data);
+      });
+
+      socket.addEventListener("close", () => {
+        console.log("WebSocket connection closed");
+      });
+
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket error:", error);
+      });
     </script>
   </body>
 </html>

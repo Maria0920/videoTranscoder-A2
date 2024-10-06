@@ -9,10 +9,10 @@ import { initDb } from "./utils/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
-import dotenv from "dotenv"; // Import dotenv
-
-// Load environment variables from .env file
-dotenv.config();
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager"; // Import SecretsManagerClient
 
 // Initialize Database
 initDb()
@@ -64,60 +64,107 @@ wss.on("connection", (ws) => {
   });
 });
 
+// Reconnection Logic
+const reconnectWebSocket = (ws) => {
+  setTimeout(() => {
+    console.log("Attempting to reconnect WebSocket...");
+    const newSocket = new WebSocket("ws://localhost:3000");
+
+    newSocket.addEventListener("open", () => {
+      console.log("WebSocket reconnected");
+      clients.add(newSocket);
+      newSocket.send("Reconnected to WebSocket"); // Optionally send a message to the server
+    });
+
+    newSocket.addEventListener("close", () => {
+      console.log("WebSocket connection closed");
+      clients.delete(newSocket);
+      reconnectWebSocket(newSocket); // Attempt to reconnect on close
+    });
+
+    newSocket.addEventListener("error", (error) => {
+      console.error("WebSocket error:", error);
+    });
+  }, 3000); // Wait for 3 seconds before attempting to reconnect
+};
+
 // Middleware setup
 app.use(express.json());
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname, "public")));
 
+// Initialize Secrets Manager client
+const secretsManagerClient = new SecretsManagerClient({
+  region: "ap-southeast-2",
+}); // Your AWS region
+
+// Fetch session secret from AWS Secrets Manager
+async function fetchSessionSecret() {
+  const command = new GetSecretValueCommand({
+    SecretId: "n11794615-jwt-secret",
+  });
+
+  try {
+    const secretValueResponse = await secretsManagerClient.send(command);
+    if ("SecretString" in secretValueResponse) {
+      return secretValueResponse.SecretString; // Return the secret string
+    }
+  } catch (err) {
+    console.error("Error fetching secret:", err);
+    throw new Error("Could not retrieve session secret");
+  }
+}
+
 // Configure session
-const setupSession = () => {
-  const secretKey = process.env.SECRET_KEY; // Load the session secret from .env
+const setupSession = async () => {
+  const secretKey = await fetchSessionSecret(); // Fetch the session secret
+
   app.use(
     session({
       secret: secretKey,
       resave: false,
       saveUninitialized: true,
-      cookie: {
-        maxAge: 1000 * 60 * 60 * 24, // 1 day
-        httpOnly: true,
-      },
     })
   );
 };
 
-// Initialize session
-setupSession();
+// Initialize session and routes
+setupSession()
+  .then(() => {
+    // Route handlers
+    app.use("/auth", authRoutes); // Authentication routes
+    app.use("/files", fileRoutes); // File handling routes
+    app.use("/videos", videoRoutes); // Video handling routes
 
-// Route handlers
-app.use("/auth", authRoutes); // Authentication routes
-app.use("/files", fileRoutes); // File handling routes
-app.use("/videos", videoRoutes); // Video handling routes
+    // Serve signup page (if necessary)
+    app.get("/signup", (req, res) => {
+      res.sendFile(path.join(__dirname, "public", "signup.html"));
+    });
 
-// Serve signup page (if necessary)
-app.get("/signup", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "signup.html"));
-});
+    // Serve index.html for other routes
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "public", "index.html"));
+    });
 
-// Serve index.html for other routes
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+    // Logout route
+    app.get("/logout", (req, res) => {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).send("Error logging out");
+        }
+        res.redirect("/");
+      });
+    });
 
-// Logout route
-app.get("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error("Error destroying session:", err);
-      return res.status(500).send("Error logging out");
-    }
-    res.redirect("/");
+    // Start server
+    server.listen(port, () => {
+      console.log(`Server running at http://localhost:${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Error setting up session:", err);
   });
-});
-
-// Start server
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
 
 // Exporting the WebSocket server
 export { wss };

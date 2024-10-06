@@ -1,22 +1,26 @@
-import express from "express";
-import jwt from "jsonwebtoken";
 import {
   CognitoIdentityProviderClient,
   SignUpCommand,
-  ConfirmSignUpCommand,
   InitiateAuthCommand,
   AdminAddUserToGroupCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
-import dotenv from "dotenv"; // Import dotenv
 
-// Load environment variables from .env file
-dotenv.config();
-
-const region = "ap-southeast-2"; // Your AWS region
+// Your AWS region
+const region = "ap-southeast-2";
 
 // Create SSM Client
 const ssmClient = new SSMClient({ region });
+
+async function getParameter(name) {
+  const command = new GetParameterCommand({
+    Name: name,
+    WithDecryption: true, // Set to true if using SecureString
+  });
+
+  const response = await ssmClient.send(command);
+  return response.Parameter.Value;
+}
 
 // Cognito client
 const client = new CognitoIdentityProviderClient({ region });
@@ -25,7 +29,7 @@ const client = new CognitoIdentityProviderClient({ region });
 async function signUp(username, password, email) {
   console.log("Signing up user...");
 
-  const clientId = process.env.CLIENT_ID; // Fetch Client ID from environment variable
+  const clientId = await getParameter("n11794615-clientID"); // Fetch Client ID from Parameter Store
 
   const signUpCommand = new SignUpCommand({
     ClientId: clientId,
@@ -60,10 +64,8 @@ async function signUp(username, password, email) {
 
 // Function to add user to a specified group
 async function addUserToGroup(username, groupName) {
-  const userPoolId = process.env.USER_POOL_ID; // Fetch User Pool ID from environment variable
-
   const adminAddUserToGroupCommand = new AdminAddUserToGroupCommand({
-    UserPoolId: userPoolId,
+    UserPoolId: await getParameter("n11794615-userPoolID"), // Fetch User Pool ID from Parameter Store
     Username: username,
     GroupName: groupName,
   });
@@ -80,7 +82,7 @@ async function addUserToGroup(username, groupName) {
 async function login(username, password) {
   console.log("Logging in user...");
 
-  const clientId = process.env.CLIENT_ID; // Fetch Client ID from environment variable
+  const clientId = await getParameter("n11794615-clientID"); // Fetch Client ID from Parameter Store
 
   const initiateAuthCommand = new InitiateAuthCommand({
     AuthFlow: "USER_PASSWORD_AUTH",
